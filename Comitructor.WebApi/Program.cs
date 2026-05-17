@@ -79,7 +79,7 @@ try
 
     app.UseHttpsRedirection();
 
-    app.UseCors("PyroCloudCorsPolicy");
+    app.UseCors("ComiTructorCorsPolicy");
 
     app.UseAuthentication();
 
