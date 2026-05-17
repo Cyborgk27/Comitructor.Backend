@@ -82,17 +82,18 @@ namespace Comitructor.Application.Services
             }
 
             return await query
-                .Select(r => new RequestDto(
-                    r.Id,
-                    r.Code,
-                    r.Title,
-                    r.Description,
-                    r.Status.ToString(),
-                    r.Priority.ToString(),
-                    r.Area.ToString(),
-                    r.AssignedUser != null ? r.AssignedUser.Username : "Sin asignar",
-                    r.CreatedDate ?? DateTime.Now
-                ))
+                .Select(r => new RequestDto() 
+                {
+                    Id = r.Id,
+                    Code= r.Code,
+                    Title = r.Title,
+                    Description = r.Description,
+                    Status = r.Status.ToString(),
+                    Priority = r.Priority.ToString(),
+                    Area = r.Area.ToString(),
+                    AssignedUserName = r.AssignedUser != null ? r.AssignedUser.Username : "Sin asignar",
+                    CreatedDate = r.CreatedDate ?? DateTime.Now
+                })
                 .ToListAsync();
         }
 
@@ -171,11 +172,18 @@ namespace Comitructor.Application.Services
             return await _context.Requests
                 .Include(r => r.AssignedUser)
                 .Where(r => r.Id == id)
-                .Select(r => new RequestDto(
-                    r.Id, r.Code, r.Title, r.Description,
-                    r.Status.ToString(), r.Priority.ToString(), r.Area.ToString(),
-                    r.AssignedUser != null ? r.AssignedUser.Username : null,
-                    r.CreatedDate ?? DateTime.Now))
+                .Select(r => new RequestDto
+                {
+                    Id = r.Id,
+                    Code = r.Code,
+                    Title = r.Title,
+                    Description = r.Description,
+                    Status = r.Status.ToString(),
+                    Priority = r.Priority.ToString(),
+                    Area = r.Area.ToString(),
+                    AssignedUserName = r.AssignedUser != null ? r.AssignedUser.Username : null,
+                    CreatedDate = r.CreatedDate ?? DateTime.Now
+                })
                 .FirstOrDefaultAsync();
         }
     }

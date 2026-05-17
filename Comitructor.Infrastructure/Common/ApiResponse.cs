@@ -1,15 +1,19 @@
-﻿namespace Comitructor.Infrastructure.Common
+﻿using System.ComponentModel;
+
+namespace Comitructor.Infrastructure.Common
 {
     public class ApiResponse<T>
     {
         /// <summary>
         /// Indica si la operación fue exitosa.
         /// </summary>
+        [DefaultValue(true)]
         public bool Success { get; set; }
 
         /// <summary>
         /// Mensaje informativo o descripción del error.
         /// </summary>
+        [DefaultValue("Operación exitosa")]
         public string Message { get; set; } = string.Empty;
 
         /// <summary>
@@ -20,7 +24,8 @@
         /// <summary>
         /// Marca de tiempo en la que se generó la respuesta.
         /// </summary>
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        [DefaultValue("2026-05-17T11:30:00Z")]
+        public DateTime Timestamp { get; set; }
 
         // Métodos estáticos para facilitar la creación de respuestas
         public static ApiResponse<T> SuccessResult(T data, string message = "Operación exitosa")

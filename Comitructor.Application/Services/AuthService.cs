@@ -58,11 +58,13 @@ namespace Comitructor.Application.Services
 
             _logger.LogInformation("Usuario {Username} autenticado exitosamente con rol {Role}", user.Username, user.Role);
 
-            return new LoginResponse(
-                Token: token,
-                Username: user.Username,
-                Role: user.Role.ToString()
-            );
+            return new LoginResponse()
+            {
+                Token = token,
+                Username = user.Username,
+                Role = user.Role.ToString()
+            }
+            ;
         }
 
         /// <summary>
