@@ -10,6 +10,7 @@ namespace Comitructor.Application.Extension
         public static IServiceCollection AddInjectionIApplication(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IRequestService, RequestService>();
             return services;
         }
     }
