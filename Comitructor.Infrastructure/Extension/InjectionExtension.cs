@@ -1,9 +1,11 @@
 ﻿using Comitructor.Domain.Interfaces;
+using Comitructor.Infrastructure.Common;
 using Comitructor.Infrastructure.Common.Settings;
 using Comitructor.Infrastructure.Identity;
 using Comitructor.Infrastructure.Persistence.Contexts;
 using Comitructor.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +56,20 @@ namespace Comitructor.Infrastructure.Extension
                     ValidAudience = jwtSettings.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
                     ClockSkew = TimeSpan.Zero
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = context =>
+                    {
+                        context.HandleResponse();
+
+                        context.Response.StatusCode = 401;
+                        context.Response.ContentType = "application/json";
+
+                        var response = ApiResponse<object>.FailureResult("No estás autorizado. Debes proporcionar un token válido.");
+                        return context.Response.WriteAsJsonAsync(response);
+                    }
                 };
             });
 
