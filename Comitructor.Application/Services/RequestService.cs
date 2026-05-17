@@ -10,6 +10,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Comitructor.Application.Services
 {
+    /// <summary>
+    /// Servicio de aplicación para la gestión del ciclo de vida de las solicitudes de mantenimiento.
+    /// Implementa reglas de negocio para asignación, cambio de estados y auditoría.
+    /// </summary>
     public class RequestService : IRequestService
     {
         private readonly ICurrentUserProvider _currentUserProvider;
@@ -26,10 +30,16 @@ namespace Comitructor.Application.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Crea una nueva solicitud generando un código correlativo y asignando auditoría inicial.
+        /// </summary>
+        /// <param name="dto">Datos de la solicitud enviados desde el cliente.</param>
+        /// <returns>ID de la solicitud generada.</returns>
         public async Task<int> CreateAsync(CreateRequestDto dto)
         {
             _logger.LogInformation("Creando nueva solicitud: {Title}", dto.Title);
 
+            // Generación de código de negocio (SOL-XXX)
             var count = await _context.Requests.CountAsync() + 1;
             var code = $"REQ-{count:D3}";
 
@@ -51,12 +61,21 @@ namespace Comitructor.Application.Services
             return request.Id;
         }
 
+        /// <summary>
+        /// Obtiene todas las solicitudes aplicando filtros de seguridad basados en el rol del usuario.
+        /// </summary>
+        /// <remarks>
+        /// Los Administradores visualizan todo el universo de datos. 
+        /// Los Operadores están limitados únicamente a las solicitudes asignadas a su identificador.
+        /// </remarks>
+        /// <returns>Colección de DTOs de solicitud.</returns>
         public async Task<IEnumerable<RequestDto>> GetAllAsync()
         {
             var query = _context.Requests
                 .Include(r => r.AssignedUser)
                 .AsQueryable();
 
+            // Lógica de seguridad: Filtrado por pertenencia de datos
             if (_currentUserProvider.Role == UserRole.Operator.ToString())
             {
                 query = query.Where(r => r.AssignedUserId == _currentUserProvider.UserId);
@@ -77,12 +96,20 @@ namespace Comitructor.Application.Services
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Realiza la transición de estado de una solicitud y registra el rastro en el historial.
+        /// </summary>
+        /// <param name="requestId">Identificador único de la solicitud.</param>
+        /// <param name="newStatus">Estado destino de la transición.</param>
+        /// <param name="reason">Explicación del cambio para fines de auditoría.</param>
+        /// <exception cref="UserFriendlyException">Si la solicitud no existe o el usuario no tiene permisos.</exception>
         public async Task UpdateStatusAsync(int requestId, string newStatus, string reason)
         {
             var request = await _context.Requests
                 .FirstOrDefaultAsync(r => r.Id == requestId)
                 ?? throw new UserFriendlyException("Solicitud no encontrada.");
 
+            // Validación de propiedad: Un operador no puede editar lo que no tiene asignado
             if (_currentUserProvider.Role == UserRole.Operator.ToString() &&
                 request.AssignedUserId != _currentUserProvider.UserId)
             {
@@ -94,6 +121,7 @@ namespace Comitructor.Application.Services
 
             request.Status = nextStatus;
 
+            // Generación de registro de auditoría (Requerimiento 2.4)
             var history = new RequestHistory
             {
                 RequestId = requestId,
@@ -108,6 +136,9 @@ namespace Comitructor.Application.Services
             _logger.LogInformation("Solicitud {Code} cambiada de {Old} a {New}", request.Code, oldStatus, nextStatus);
         }
 
+        /// <summary>
+        /// Asigna una solicitud a un usuario operador específico. Solo permitido para Administradores.
+        /// </summary>
         public async Task AssignRequestAsync(int requestId, int userId)
         {
             if (_currentUserProvider.Role != UserRole.Administrator.ToString())
@@ -120,6 +151,9 @@ namespace Comitructor.Application.Services
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Ejecuta un borrado lógico (Soft Delete) de la solicitud mediante el flag IsDeleted.
+        /// </summary>
         public async Task DeleteAsync(int id)
         {
             var request = await _context.Requests.FindAsync(id)
@@ -129,6 +163,9 @@ namespace Comitructor.Application.Services
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Recupera el detalle de una solicitud individual incluyendo información del usuario asignado.
+        /// </summary>
         public async Task<RequestDto?> GetByIdAsync(int id)
         {
             return await _context.Requests
