@@ -1,3 +1,4 @@
+using Comitructor.Application.Extension;
 using Comitructor.Infrastructure.Extension;
 using Serilog;
 
@@ -16,6 +17,7 @@ try
 
     // Add services to the container.
     builder.Services.AddInjectionInfrastructure(configuration);
+    builder.Services.AddInjectionIApplication(configuration);
 
     builder.Services.AddControllers();
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

@@ -28,6 +28,7 @@ namespace Comitructor.Infrastructure.Persistence.Contexts.Configurations
             builder.HasOne(h => h.Request)
                 .WithMany(r => r.Histories)
                 .HasForeignKey(h => h.RequestId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

@@ -65,6 +65,8 @@ namespace Comitructor.Infrastructure.Extension
 
             services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
 
+            services.AddScoped<IPasswordHasher, PasswordHasher>();
+
             services.AddDbContext<ApplicationDbContext>(options => 
                 options.UseSqlServer(configuration.GetConnectionString(infraSettings.Database.SqlServer))
             );
