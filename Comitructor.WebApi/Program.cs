@@ -42,6 +42,10 @@ try
     app.Run();
 
 }
+catch (HostAbortedException)
+{
+    Log.Information("Usando herramientas de EF tools: Add-Migration / Update-Database");
+}
 catch (Exception ex)
 {
     Log.Fatal(ex, "El host termino inesperadamente");
