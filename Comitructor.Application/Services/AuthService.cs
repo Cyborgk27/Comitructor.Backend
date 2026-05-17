@@ -1,4 +1,4 @@
-﻿using Comitructor.Application.Dtos;
+﻿using Comitructor.Application.Dtos.Auth;
 using Comitructor.Application.Interfaces;
 using Comitructor.Domain.Entities;
 using Comitructor.Domain.Enums;
