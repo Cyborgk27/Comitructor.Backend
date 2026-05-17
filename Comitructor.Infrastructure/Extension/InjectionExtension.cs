@@ -1,5 +1,10 @@
-﻿using Comitructor.Infrastructure.Common.Settings;
+﻿using Comitructor.Domain.Interfaces;
+using Comitructor.Infrastructure.Common.Settings;
+using Comitructor.Infrastructure.Identity;
+using Comitructor.Infrastructure.Persistence.Contexts;
+using Comitructor.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -55,6 +60,14 @@ namespace Comitructor.Infrastructure.Extension
             services.AddHttpContextAccessor();
 
             services.Configure<InfrastructureSettings>(configuration.GetSection("Infrastructure"));
+
+            services.AddScoped<IJwtProvider, JwtProvider>();
+
+            services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
+
+            services.AddDbContext<ApplicationDbContext>(options => 
+                options.UseSqlServer(configuration.GetConnectionString(infraSettings.Database.SqlServer))
+            );
 
             return services;
         }
