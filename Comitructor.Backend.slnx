@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="Comitructor.Application/Comitructor.Application.csproj" />
+    <Project Path="Comitructor.Domain/Comitructor.Domain.csproj" />
+    <Project Path="Comitructor.Infrastructure/Comitructor.Infrastructure.csproj" />
+    <Project Path="Comitructor.WebApi/Comitructor.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
+</Solution>
