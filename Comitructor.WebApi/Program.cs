@@ -21,6 +21,7 @@ try
     // Add services to the container.
     builder.Services.AddInjectionInfrastructure(configuration);
     builder.Services.AddInjectionIApplication(configuration);
+    builder.Services.AddHealthChecks();
 
     builder.Services.AddControllers(options =>
     {
@@ -78,9 +79,15 @@ try
 
     app.UseHttpsRedirection();
 
+    app.UseCors("PyroCloudCorsPolicy");
+
+    app.UseAuthentication();
+
     app.UseAuthorization();
 
     app.MapControllers();
+
+    app.MapHealthChecks("/health");
 
     app.UseSerilogRequestLogging();
 
