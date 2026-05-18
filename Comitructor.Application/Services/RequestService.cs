@@ -54,6 +54,7 @@ namespace Comitructor.Application.Services
                 CreatedBy = _currentUserProvider.UserId,
                 CreatedDate = DateTime.UtcNow,
                 DueDate = dto.DueDate ?? DateTime.Now.AddDays(2),
+                AssignedUserId = dto.AssignedUserId
             };
 
             _context.Requests.Add(request);
@@ -95,6 +96,7 @@ namespace Comitructor.Application.Services
             request.Priority = Enum.Parse<RequestPriority>(dto.Priority);
             request.Area = Enum.Parse<RequestArea>(dto.Area);
             request.DueDate = dto.DueDate;
+            request.AssignedUserId = dto.AssignedUserId;
 
             // 4. Auditoría de BaseEntity
             request.LastModifiedBy = _currentUserProvider.UserId;
@@ -127,11 +129,13 @@ namespace Comitructor.Application.Services
                 query = query.Where(r => r.AssignedUserId == _currentUserProvider.UserId);
             }
 
+            query = query.OrderByDescending(r => r.Id);
+
             return await query
-                .Select(r => new RequestDto() 
+                .Select(r => new RequestDto()
                 {
                     Id = r.Id,
-                    Code= r.Code,
+                    Code = r.Code,
                     Title = r.Title,
                     Description = r.Description,
                     Status = r.Status.ToString(),
