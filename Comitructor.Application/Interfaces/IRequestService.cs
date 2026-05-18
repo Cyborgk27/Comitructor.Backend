@@ -1,4 +1,5 @@
-﻿using Comitructor.Application.Dtos.Request;
+﻿using Comitructor.Application.Dtos;
+using Comitructor.Application.Dtos.Request;
 
 namespace Comitructor.Application.Interfaces
 {
@@ -30,7 +31,7 @@ namespace Comitructor.Application.Interfaces
         /// Obtiene todas las solicitudes con filtros aplicados (por Rol o Estado).
         /// Si el usuario es 'Operator', solo debería ver las que tiene asignadas.
         /// </summary>
-        Task<IEnumerable<RequestDto>> GetAllAsync();
+        Task<PagedResponseDto<RequestDto>> GetAllAsync(RequestFilterDto filter);
 
         /// <summary>
         /// Obtiene el detalle de una solicitud específica, incluyendo su historial.
@@ -66,6 +67,31 @@ namespace Comitructor.Application.Interfaces
         /// permisos para ser asignados a tareas.
         /// </remarks>
         Task<IEnumerable<UserResponseDto>> GetUsersForSelectAsync();
+
+        /// <summary>
+        /// Obtiene el historial de auditoría de una solicitud específica.
+        /// </summary>
+        /// <remarks>
+        /// Este método recupera todas las transiciones de estado, incluyendo quién realizó el cambio 
+        /// y el motivo, ordenados desde la modificación más reciente a la más antigua.
+        /// </remarks>
+        /// <param name="requestId">El identificador único de la solicitud (Request).</param>
+        /// <returns>Una colección de <see cref="RequestHistoryDto"/> con los movimientos encontrados.</returns>
+        Task<IEnumerable<RequestHistoryDto>> GetHistoryAsync(int requestId);
+
+        /// <summary>
+        /// Calcula y recupera un resumen estadístico de las solicitudes existentes en el sistema.
+        /// </summary>
+        /// <remarks>
+        /// Este método realiza un conteo agregando solicitudes por su estado (Abiertas, Cerradas), 
+        /// su prioridad (Críticas) y su validez temporal (Vencidas). 
+        /// Es ideal para alimentar widgets de KPI o tarjetas de resumen en el Dashboard.
+        /// </remarks>
+        /// <returns>
+        /// Una tarea que representa la operación asíncrona. 
+        /// El resultado de la tarea contiene un <see cref="RequestSummaryDto"/> con los contadores calculados.
+        /// </returns>
+        Task<RequestSummaryDto> GetSummaryAsync();
 
     }
 }

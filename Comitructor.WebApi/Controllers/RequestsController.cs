@@ -1,4 +1,5 @@
-﻿using Comitructor.Application.Dtos.Request;
+﻿using Comitructor.Application.Dtos;
+using Comitructor.Application.Dtos.Request;
 using Comitructor.Application.Interfaces;
 using Comitructor.Infrastructure.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -29,10 +30,15 @@ namespace Comitructor.WebApi.Controllers
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<IEnumerable<RequestDto>>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> Get()
+        public async Task<ActionResult<ApiResponse<PagedResponseDto<RequestDto>>>> GetAll([FromQuery] RequestFilterDto filter)
         {
-            var result = await _requestService.GetAllAsync();
-            return Ok(result);
+            var result = await _requestService.GetAllAsync(filter);
+            return Ok(new ApiResponse<PagedResponseDto<RequestDto>>
+            {
+                Success = true,
+                Data = result,
+                Message = "Solicitudes recuperadas con éxito"
+            });
         }
 
         /// <summary>
@@ -118,6 +124,45 @@ namespace Comitructor.WebApi.Controllers
         {
             var users = await _requestService.GetUsersForSelectAsync();
             return Ok(users);
+        }
+
+        /// <summary>
+        /// Obtiene el historial de cambios de estado de una solicitud.
+        /// </summary>
+        /// <param name="id">ID de la solicitud.</param>
+        /// <remarks>
+        /// Devuelve una lista cronológica descendente (la más reciente primero) de los cambios de estado, 
+        /// incluyendo el motivo y el usuario que realizó la acción.
+        /// </remarks>
+        [HttpGet("{id:int}/history")]
+        [ProducesResponseType(typeof(ApiResponse<IEnumerable<RequestHistoryDto>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetHistory(int id)
+        {
+            var history = await _requestService.GetHistoryAsync(id);
+            return Ok(new ApiResponse<IEnumerable<RequestHistoryDto>>
+            {
+                Success = true,
+                Data = history,
+                Message = "Historial recuperado con éxito"
+            });
+        }
+
+        /// <summary>
+        /// Obtiene un resumen estadístico de las solicitudes para las tarjetas del Dashboard.
+        /// </summary>
+        /// <returns>Métricas de conteo de solicitudes por categorías críticas.</returns>
+        [HttpGet("summary")]
+        [ProducesResponseType(typeof(ApiResponse<RequestSummaryDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSummary()
+        {
+            var summary = await _requestService.GetSummaryAsync();
+            return Ok(new ApiResponse<RequestSummaryDto>
+            {
+                Success = true,
+                Data = summary,
+                Message = "Resumen obtenido correctamente"
+            });
         }
     }
 }

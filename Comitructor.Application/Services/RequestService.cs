@@ -1,4 +1,5 @@
-﻿using Comitructor.Application.Dtos.Request;
+﻿using Comitructor.Application.Dtos;
+using Comitructor.Application.Dtos.Request;
 using Comitructor.Application.Interfaces;
 using Comitructor.Domain.Entities;
 using Comitructor.Domain.Enums;
@@ -110,29 +111,53 @@ namespace Comitructor.Application.Services
         }
 
         /// <summary>
-        /// Obtiene todas las solicitudes aplicando filtros de seguridad basados en el rol del usuario.
+        /// Obtiene solicitudes filtradas, paginadas y con lógica de seguridad aplicada.
         /// </summary>
-        /// <remarks>
-        /// Los Administradores visualizan todo el universo de datos. 
-        /// Los Operadores están limitados únicamente a las solicitudes asignadas a su identificador.
-        /// </remarks>
-        /// <returns>Colección de DTOs de solicitud.</returns>
-        public async Task<IEnumerable<RequestDto>> GetAllAsync()
+        public async Task<PagedResponseDto<RequestDto>> GetAllAsync(RequestFilterDto filter)
         {
+            _logger.LogInformation("Consultando solicitudes con filtros: {@Filter}", filter);
+
             var query = _context.Requests
                 .Include(r => r.AssignedUser)
+                .Where(r => !r.IsDeleted)
                 .AsQueryable();
 
-            // Lógica de seguridad: Filtrado por pertenencia de datos
+            // 1. Lógica de Seguridad (Roles)
             if (_currentUserProvider.Role == UserRole.Operator.ToString())
             {
                 query = query.Where(r => r.AssignedUserId == _currentUserProvider.UserId);
             }
 
-            query = query.OrderByDescending(r => r.Id);
+            // 2. Filtros Dinámicos
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                var term = filter.SearchTerm.ToLower();
+                query = query.Where(r => r.Title.ToLower().Contains(term) ||
+                                         r.Code.ToLower().Contains(term) ||
+                                         r.Description.ToLower().Contains(term));
+            }
 
-            return await query
-                .Select(r => new RequestDto()
+            if (!string.IsNullOrWhiteSpace(filter.Status))
+            {
+                if (Enum.TryParse<RequestStatus>(filter.Status, true, out var statusEnum))
+                    query = query.Where(r => r.Status == statusEnum);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Priority))
+            {
+                if (Enum.TryParse<RequestPriority>(filter.Priority, true, out var priorityEnum))
+                    query = query.Where(r => r.Priority == priorityEnum);
+            }
+
+            // 3. Conteo Total (Antes de paginar)
+            var totalCount = await query.CountAsync();
+
+            // 4. Paginación y Proyección
+            var items = await query
+                .OrderByDescending(r => r.Id)
+                .Skip((filter.Page - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .Select(r => new RequestDto
                 {
                     Id = r.Id,
                     Code = r.Code,
@@ -142,9 +167,16 @@ namespace Comitructor.Application.Services
                     Priority = r.Priority.ToString(),
                     Area = r.Area.ToString(),
                     AssignedUserName = r.AssignedUser != null ? r.AssignedUser.Username : "Sin asignar",
-                    CreatedDate = r.CreatedDate ?? DateTime.Now
+                    CreatedDate = r.CreatedDate ?? DateTime.Now,
+                    DueDate = r.DueDate
                 })
                 .ToListAsync();
+
+            return new PagedResponseDto<RequestDto>
+            {
+                Items = items,
+                TotalCount = totalCount
+            };
         }
 
         /// <summary>
@@ -272,6 +304,63 @@ namespace Comitructor.Application.Services
                 _logger.LogError(ex, "Error al intentar recuperar la lista de usuarios para selección.");
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Obtiene el historial de una solicitud incluyendo los datos del usuario asignado a la petición original.
+        /// </summary>
+        /// <param name="requestId">Identificador único de la solicitud.</param>
+        /// <returns>Lista de historial con el nombre del usuario responsable.</returns>
+        public async Task<IEnumerable<RequestHistoryDto>> GetHistoryAsync(int requestId)
+        {
+            return await _context.RequestHistory
+                .Where(h => h.RequestId == requestId)
+                .OrderByDescending(h => h.CreatedDate)
+                .Include(h => h.Request)
+                    .ThenInclude(r => r.AssignedUser)
+                .Select(h => new RequestHistoryDto
+                {
+                    Id = h.Id,
+                    PreviousStatus = h.PreviousStatus.ToString(),
+                    NewStatus = h.NewStatus.ToString(),
+                    ChangeReason = h.ChangeReason,
+                    CreatedDate = h.CreatedDate ?? DateTime.UtcNow,
+                    UserName = h.Request.AssignedUser != null
+                               ? h.Request.AssignedUser.Username
+                               : "Sistema"
+                })
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Calcula las métricas de las solicitudes basadas en su estado, prioridad y fecha de vencimiento.
+        /// </summary>
+        public async Task<RequestSummaryDto> GetSummaryAsync()
+        {
+            var now = DateTime.UtcNow;
+
+            // Obtenemos todos los datos necesarios en una sola pasada para eficiencia
+            var stats = await _context.Requests
+                .Select(r => new { r.Status, r.Priority, r.DueDate })
+                .ToListAsync();
+
+            return new RequestSummaryDto
+            {
+                TotalRequests = stats.Count,
+
+                OpenRequests = stats.Count(r => r.Status == RequestStatus.New ||
+                                               r.Status == RequestStatus.InProgress),
+
+                CriticalRequests = stats.Count(r => r.Priority == RequestPriority.Critical),
+
+                // Vencidas: Fecha pasada y que no estén cerradas/canceladas
+                OverdueRequests = stats.Count(r => r.DueDate < now &&
+                                                  r.Status != RequestStatus.Closed &&
+                                                  r.Status != RequestStatus.Cancelled),
+
+                ClosedRequests = stats.Count(r => r.Status == RequestStatus.Closed ||
+                                                r.Status == RequestStatus.Cancelled)
+            };
         }
     }
 }
