@@ -53,10 +53,56 @@ namespace Comitructor.Application.Services
                 Status = RequestStatus.New,
                 CreatedBy = _currentUserProvider.UserId,
                 CreatedDate = DateTime.UtcNow,
+                DueDate = dto.DueDate ?? DateTime.Now.AddDays(2),
             };
 
             _context.Requests.Add(request);
             await _context.SaveChangesAsync();
+
+            return request.Id;
+        }
+
+        /// <summary>
+        /// Actualiza los datos generales de una solicitud existente respetando las reglas del dominio.
+        /// </summary>
+        /// <param name="dto">Datos de la solicitud a actualizar.</param>
+        /// <returns>ID de la solicitud actualizada.</returns>
+        public async Task<int> UpdateAsync(UpdateRequestDto dto)
+        {
+            _logger.LogInformation("Iniciando actualización de solicitud {Id}", dto.Id);
+
+            var request = await _context.Requests
+                .FirstOrDefaultAsync(r => r.Id == dto.Id)
+                ?? throw new UserFriendlyException("Solicitud no encontrada.");
+
+            // 1. Validación de reglas de negocio desde la entidad
+            if (!request.IsEditable())
+            {
+                throw new UserFriendlyException($"La solicitud {request.Code} no se puede editar porque su estado es {request.Status}.");
+            }
+
+            // 2. Validación de seguridad (Permisos por Rol)
+            if (_currentUserProvider.Role == UserRole.Operator.ToString() &&
+                request.AssignedUserId != _currentUserProvider.UserId &&
+                request.CreatedBy != _currentUserProvider.UserId)
+            {
+                throw new UserFriendlyException("No tienes permisos suficientes para modificar esta solicitud.");
+            }
+
+            // 3. Actualización de campos
+            request.Title = dto.Title;
+            request.Description = dto.Description;
+            request.Priority = Enum.Parse<RequestPriority>(dto.Priority);
+            request.Area = Enum.Parse<RequestArea>(dto.Area);
+            request.DueDate = dto.DueDate;
+
+            // 4. Auditoría de BaseEntity
+            request.LastModifiedBy = _currentUserProvider.UserId;
+            request.LastModifiedDate = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Solicitud {Code} actualizada por el usuario {UserId}", request.Code, _currentUserProvider.UserId);
 
             return request.Id;
         }
@@ -181,10 +227,47 @@ namespace Comitructor.Application.Services
                     Status = r.Status.ToString(),
                     Priority = r.Priority.ToString(),
                     Area = r.Area.ToString(),
+                    AssignedUserId = r.AssignedUserId,
                     AssignedUserName = r.AssignedUser != null ? r.AssignedUser.Username : null,
+                    DueDate = r.DueDate,
                     CreatedDate = r.CreatedDate ?? DateTime.Now
                 })
                 .FirstOrDefaultAsync();
+        }
+
+        /// <summary>
+        /// Recupera una lista optimizada de usuarios activos para su visualización en componentes de selección.
+        /// </summary>
+        /// <returns>Una colección de <see cref="UserResponseDto"/> con datos mínimos de identidad.</returns>
+        /// <remarks>
+        /// Utiliza <see cref="QueryableExtensions.AsNoTracking"/> para mejorar el rendimiento al omitir el seguimiento 
+        /// en el Change Tracker de EF Core. Filtra automáticamente usuarios con borrado lógico (<c>IsDeleted</c>).
+        /// </remarks>
+        public async Task<IEnumerable<UserResponseDto>> GetUsersForSelectAsync()
+        {
+            _logger.LogInformation("Iniciando consulta de usuarios para componentes de selección.");
+
+            try
+            {
+                var users = await _context.Users
+                    .AsNoTracking()
+                    .Where(u => !u.IsDeleted)
+                    .Select(u => new UserResponseDto
+                    {
+                        Id = u.Id,
+                        UserName = u.Username
+                    })
+                    .ToListAsync();
+
+                _logger.LogInformation("Se recuperaron {Count} usuarios activos con éxito.", users.Count);
+
+                return users;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al intentar recuperar la lista de usuarios para selección.");
+                throw;
+            }
         }
     }
 }

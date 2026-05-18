@@ -63,6 +63,19 @@ namespace Comitructor.WebApi.Controllers
         }
 
         /// <summary>
+        /// Actualiza una solicitud de mantenimiento en el sistema.
+        /// </summary>
+        /// <param name="input">Datos básicos de la solicitud.</param>
+        [HttpPut]
+        [ProducesResponseType(typeof(ApiResponse<int>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Update([FromBody] UpdateRequestDto input)
+        {
+            var result = await _requestService.UpdateAsync(input);
+            return Ok(result);
+        }
+
+        /// <summary>
         /// Actualiza el estado de una solicitud y registra el motivo en el historial.
         /// </summary>
         [HttpPut("update-status")]
@@ -91,6 +104,20 @@ namespace Comitructor.WebApi.Controllers
         {
             await _requestService.AssignRequestAsync(requestId, userId);
             return Ok(new { message = "Solicitud asignada correctamente" });
+        }
+
+        /// <summary>
+        /// Obtiene una lista de usuarios simplificada para componentes de selección.
+        /// </summary>
+        /// <returns>Lista de usuarios con ID y nombre.</returns>
+        /// <response code="200">Retorna la lista de usuarios activos.</response>
+        /// <response code="401">Si el usuario no está autenticado.</response>
+        [HttpGet("users-lookup")]
+        [ProducesResponseType(typeof(IEnumerable<UserResponseDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<UserResponseDto>>> GetUsersLookup()
+        {
+            var users = await _requestService.GetUsersForSelectAsync();
+            return Ok(users);
         }
     }
 }

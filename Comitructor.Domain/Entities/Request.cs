@@ -20,7 +20,7 @@ namespace Comitructor.Domain.Entities
         /// <summary>
         /// ID del usuario responsable (Operador o Administrador).
         /// </summary>
-        public int? AssignedUserId { get; set; }
+        public int AssignedUserId { get; set; }
 
         /// <summary>
         /// Propiedad de navegación al usuario asignado.

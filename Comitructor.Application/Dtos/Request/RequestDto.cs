@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Comitructor.Application.Dtos.Request
 {
@@ -51,5 +52,16 @@ namespace Comitructor.Application.Dtos.Request
         /// <example>2026-05-17T14:30:00Z</example>
         [DefaultValue("2026-05-17T14:30:00Z")]
         public DateTime CreatedDate { get; set; }
+
+        /// <summary>
+        /// Fecha de vencimiento opcional. Por defecto se asigna 48 horas desde la creación.
+        /// </summary>
+        public DateTime? DueDate { get; set; }
+
+        /// <summary>
+        /// Id del usuario asignado a la tarea
+        /// </summary>
+        [Required]
+        public int AssignedUserId { get; set; }
     }
 }

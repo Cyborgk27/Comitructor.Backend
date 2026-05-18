@@ -25,6 +25,12 @@ namespace Comitructor.Application.Dtos.Request
         public string Description { get; set; } = string.Empty;
 
         /// <summary>
+        /// Id del usuario asignado a la tarea
+        /// </summary>
+        [Required]
+        public int AssignedUserId { get; set; }
+
+        /// <summary>
         /// Prioridad de la solicitud (Low, Medium, High, Urgent).
         /// </summary>
         /// <example>Medium</example>
@@ -39,5 +45,10 @@ namespace Comitructor.Application.Dtos.Request
         [Required]
         [DefaultValue("Electric")]
         public string Area { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Fecha de vencimiento opcional. Por defecto se asigna 48 horas desde la creación.
+        /// </summary>
+        public DateTime? DueDate { get; set; } = null;
     }
 }
